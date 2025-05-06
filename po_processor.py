@@ -171,18 +171,40 @@ def process_pos(input_file=INPUT_EXCEL_FILE, output_file=OUTPUT_EXCEL_FILE):
     print("Stock allocation complete.")
 
     # ---> Prepare remaining stock data <--- START
-    final_stock_list = []
+    final_stock_list = [] # This will store dictionaries, each representing a row in the output
     for fabric_code, data in stock_data.items():
-        incoming_batches_str = "; ".join([
-            f"ETA: {b['eta'].strftime('%Y-%m-%d')}, Qty: {b['quantity']}"
-            for b in data['incoming']
-        ])
-        final_stock_list.append({
-            'Mã Vải': fabric_code,
-            'Remaining Available (as of {TODAY_DATE.strftime("%Y-%m-%d")})': data['available'],
-            'Remaining Incoming Batches': incoming_batches_str if incoming_batches_str else "None"
-        })
+        remaining_available_on_hand = data['available'] # Stock with ETA <= TODAY_DATE
+
+        if not data['incoming']:
+            # Case 1: Fabric has remaining on-hand stock, but NO future incoming batches left.
+            # Create one row for this fabric.
+            final_stock_list.append({
+                'Mã Vải': fabric_code,
+                f'Remaining Available (as of {TODAY_DATE.strftime("%Y-%m-%d")})': remaining_available_on_hand,
+                'Incoming Batch ETA': pd.NA,  # Placeholder for no ETA
+                'Incoming Batch Quantity': pd.NA  # Placeholder for no Quantity
+            })
+        else:
+            # Case 2: Fabric has remaining on-hand stock AND one or more future incoming batches.
+            # Create a distinct row for EACH remaining incoming batch.
+            for batch in data['incoming']:
+                final_stock_list.append({
+                    'Mã Vải': fabric_code, # Repeated for each batch of this fabric
+                    f'Remaining Available (as of {TODAY_DATE.strftime("%Y-%m-%d")})': remaining_available_on_hand, # Repeated
+                    'Incoming Batch ETA': batch['eta'], # Store the datetime object
+                    'Incoming Batch Quantity': batch['quantity']
+                })
+                
     remaining_stock_df = pd.DataFrame(final_stock_list)
+
+    # Format the 'Incoming Batch ETA' column to 'YYYY-MM-DD' string, handling potential NaT values
+    if 'Incoming Batch ETA' in remaining_stock_df.columns:
+         remaining_stock_df['Incoming Batch ETA'] = pd.to_datetime(remaining_stock_df['Incoming Batch ETA'], errors='coerce').dt.strftime('%Y-%m-%d')
+    
+    # If you want to ensure blank cells for NA quantities as well (optional, pandas usually handles this well for Excel)
+    if 'Incoming Batch Quantity' in remaining_stock_df.columns:
+        remaining_stock_df['Incoming Batch Quantity'] = pd.to_numeric(remaining_stock_df['Incoming Batch Quantity'], errors='coerce')
+
     # ---> Prepare remaining stock data <--- END
 
     # 5. Schedule Production
@@ -195,32 +217,55 @@ def process_pos(input_file=INPUT_EXCEL_FILE, output_file=OUTPUT_EXCEL_FILE):
 
     for po_info in po_schedule_info:
         po_id = po_info['PO']
-        quantity = po_info['Quantity']
-        current_date = po_info['DesiredStartDate']
+        quantity_to_schedule = po_info['Quantity']
+        scheduling_date = po_info['DesiredStartDate'] 
+        
+        actual_start_date_for_etd = FAR_FUTURE_DATE # Default for this PO
 
-        if current_date == FAR_FUTURE_DATE:
-            # Cannot schedule POs with insufficient stock
-            actual_start_date = FAR_FUTURE_DATE
+        if scheduling_date == FAR_FUTURE_DATE:
+            # PO has insufficient stock, cannot be scheduled
+            pass # actual_start_date_for_etd remains FAR_FUTURE_DATE
         else:
-            # Find the first available date from desired start date onwards
-            while True:
-                daily_cap = get_daily_capacity(current_date)
-                # Check if adding this PO exceeds capacity for the day
-                if daily_production_schedule[current_date] + quantity <= daily_cap:
-                    daily_production_schedule[current_date] += quantity
-                    actual_start_date = current_date
-                    break
-                else:
-                    # Move to the next day
-                    current_date += datetime.timedelta(days=1)
-                    if current_date.year > FAR_FUTURE_DATE.year + 1: # Safety break
-                        print(f"Warning: Could not find capacity slot for PO {po_id} within reasonable time. Setting start date to far future.")
-                        actual_start_date = FAR_FUTURE_DATE
-                        break
+            # PO has stock, try to schedule its production
+            first_day_production_assigned_this_po = None # Track the first day this PO starts production
+
+            # Loop until the entire quantity for this PO is scheduled or we hit a safety limit
+            while quantity_to_schedule > 0:
+                daily_cap = get_daily_capacity(scheduling_date)
+                # Capacity available on this specific day, considering other POs already scheduled
+                available_capacity_on_day = daily_cap - daily_production_schedule[scheduling_date]
+
+                if available_capacity_on_day > 0:
+                    if first_day_production_assigned_this_po is None:
+                        # This is the first day production starts for this PO
+                        first_day_production_assigned_this_po = scheduling_date
+                    
+                    # Determine how much of the current PO can be produced today
+                    producible_today = min(quantity_to_schedule, available_capacity_on_day)
+                    
+                    daily_production_schedule[scheduling_date] += producible_today
+                    quantity_to_schedule -= producible_today
+
+                if quantity_to_schedule <= 0: # PO fully scheduled
+                    actual_start_date_for_etd = first_day_production_assigned_this_po
+                    break # Exit the while loop for this PO
+
+                # Move to the next day to schedule remaining quantity
+                scheduling_date += datetime.timedelta(days=1)
+
+                # Safety break: If scheduling date goes into the FAR_FUTURE_DATE's year
+                # and the PO is still not fully scheduled, mark it as unschedulable.
+                if scheduling_date.year >= FAR_FUTURE_DATE.year:
+                    print(f"Warning: PO {po_id} (remaining qty: {quantity_to_schedule}) could not be *fully* scheduled before {FAR_FUTURE_DATE_STR}. Its ETD will indicate insufficient capacity.")
+                    actual_start_date_for_etd = FAR_FUTURE_DATE # Mark as unschedulable
+                    break # Exit the while loop for this PO
+            
+            # If loop finished and quantity_to_schedule is 0, actual_start_date_for_etd is already set.
+            # If loop broke due to safety, actual_start_date_for_etd is FAR_FUTURE_DATE.
 
         po_final_schedule.append({
             'PO': po_id,
-            'ActualStartDate': actual_start_date
+            'ActualStartDate': actual_start_date_for_etd
         })
 
     print("Production scheduling complete.")
@@ -228,13 +273,13 @@ def process_pos(input_file=INPUT_EXCEL_FILE, output_file=OUTPUT_EXCEL_FILE):
 
     # 6. Calculate ETD
     print("Calculating ETDs...")
-    results = []
+    results = [] # This list will contain dictionaries like {'PO': po_id, 'ETD': etd_datetime_object}
     for schedule_item in po_final_schedule:
         po_id = schedule_item['PO']
         actual_start_date = schedule_item['ActualStartDate']
 
         if actual_start_date == FAR_FUTURE_DATE:
-            etd = FAR_FUTURE_DATE # Or None, or specific indicator
+            etd = FAR_FUTURE_DATE # ETD is a datetime object (or FAR_FUTURE_DATE)
             print(f"PO {po_id}: Cannot determine ETD due to insufficient stock or capacity issues.")
         else:
             etd = actual_start_date + datetime.timedelta(days=LEAD_TIME_DAYS)
@@ -246,12 +291,36 @@ def process_pos(input_file=INPUT_EXCEL_FILE, output_file=OUTPUT_EXCEL_FILE):
 
     # 7. Output Results
     print(f"Writing results to {output_file}...")
-    etd_output_df = pd.DataFrame(results)
-    # Format ETD column for better readability in Excel
+
+    # Convert the ETD results list to a DataFrame
+    etd_info_df = pd.DataFrame(results) # Contains 'PO' and 'ETD' (ETD is datetime)
+
+    # The 'prioritized_pos' DataFrame (from Step 3) contains all original PO details
+    # including 'Mã Vải', 'SPL', 'CHD', 'Quantity request', 'Forecasted'.
+    # Merge the original PO details with the ETD information.
+    # 'prioritized_pos' columns: PO, Mã Vải, SPL, CHD (datetime), Quantity request, Forecasted
+    # 'etd_info_df' columns: PO, ETD (datetime)
+    
+    # Ensure 'CHD' in 'prioritized_pos' is in a consistent state if it hasn't been modified since read
+    # (it was read as datetime and should still be)
+    
+    etd_output_df = pd.merge(prioritized_pos, etd_info_df, on='PO', how='left')
+    
+    # Format date columns for output
+    # CHD is already a datetime object from the initial read and prioritization.
+    etd_output_df['CHD'] = etd_output_df['CHD'].dt.strftime('%Y-%m-%d')
+    
+    # ETD is also a datetime object (or FAR_FUTURE_DATE which is also datetime)
     etd_output_df['ETD'] = etd_output_df['ETD'].dt.strftime('%Y-%m-%d')
-    # Replace far future date string for clarity
+    # Replace far future date string for ETD clarity
     etd_output_df['ETD'] = etd_output_df['ETD'].replace(FAR_FUTURE_DATE.strftime('%Y-%m-%d'), 'Insufficient Stock/Capacity')
 
+    # Define the desired column order for the output sheet
+    final_output_columns = [
+        'PO', 'Mã Vải', 'SPL', 'CHD', 
+        'Quantity request', 'Forecasted', 'ETD'
+    ]
+    etd_output_df = etd_output_df[final_output_columns] # Reorder/select columns
 
     try:
         # Use ExcelWriter to save multiple sheets
