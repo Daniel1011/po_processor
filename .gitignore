@@ -1,4 +1,5 @@
-output.xlsx
-input.xlsx
+Output_Stock_Management.xlsx
+PO - Request.xlsx
 __pycache__/
 *.pyc 
+launch.json
