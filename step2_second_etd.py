@@ -9,12 +9,18 @@ def calculate_second_etd(draft_etd_df, first_lot_df, far_future_date):
     print(first_lot_df[['Greige Code', 'COLOR', 'STATUS', 'DUE DATE']].head())
     
     # Clean up COLOR values in both dataframes by removing extra spaces
-    draft_etd_df['COLOR'] = draft_etd_df['COLOR'].str.strip().str.replace(r'\s+', ' ')
-    first_lot_df['COLOR'] = first_lot_df['COLOR'].str.strip().str.replace(r'\s+', ' ')
+    draft_etd_df['COLOR'] = draft_etd_df['COLOR'].astype(str).str.strip().str.replace(r'\s+', ' ', regex=True)
+    if 'COLOR' in first_lot_df.columns: # Add check for COLOR column existence
+        first_lot_df['COLOR'] = first_lot_df['COLOR'].astype(str).str.strip().str.replace(r'\s+', ' ', regex=True)
+    else:
+        print("Warning: 'COLOR' column not found in first_lot_df in calculate_second_etd. Merging might be affected.")
+        # Consider adding an empty 'COLOR' column if merge must proceed: first_lot_df['COLOR'] = ""
     
-    # Convert Greige Code to integer in both dataframes
-    draft_etd_df['Greige Code'] = draft_etd_df['Greige Code'].astype(int)
-    first_lot_df['Greige Code'] = first_lot_df['Greige Code'].astype(int)
+    # Convert Greige Code to string type in both dataframes
+    if 'Greige Code' in draft_etd_df.columns:
+        draft_etd_df['Greige Code'] = draft_etd_df['Greige Code'].astype(str)
+    if 'Greige Code' in first_lot_df.columns:
+        first_lot_df['Greige Code'] = first_lot_df['Greige Code'].astype(str)
     
     # Convert STATUS to uppercase for consistent comparison
     first_lot_df['STATUS'] = first_lot_df['STATUS'].str.strip().str.upper()

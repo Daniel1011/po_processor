@@ -81,8 +81,14 @@ def load_and_prepare_data(input_file, ocd_col_name):
             print(f"Warning: Column '{col}' not found in 1ST LOT STATUS sheet. Adding it as NA.")
             first_lot_df[col] = pd.NA
     
-    first_lot_df['Greige Code'] = pd.to_numeric(first_lot_df['Greige Code'], errors='coerce')
-    first_lot_df['STATUS'] = first_lot_df['STATUS'].str.strip().str.upper()
+    # Convert Greige Code to string type
+    if 'Greige Code' in first_lot_df.columns:
+        first_lot_df['Greige Code'] = first_lot_df['Greige Code'].astype(str)
+    
+    # Ensure STATUS is string and clean it
+    if 'STATUS' in first_lot_df.columns:
+        first_lot_df['STATUS'] = first_lot_df['STATUS'].astype(str).str.strip().str.upper()
+    
     first_lot_df.dropna(subset=['Greige Code', 'COLOR', 'STATUS'], inplace=True)
 
     # Print debug information after cleaning
@@ -129,36 +135,57 @@ def read_input_data(file_path):
 def clean_stock_data(df):
     """Cleans and preprocesses stock data."""
     # Rename columns
-    df = df.rename(columns={
-        'Mã Vải': 'Greige Code',
+    # Ensure 'Greige Code' is the target name after potential renames from 'Mã Vải' or 'DSM Code'
+    rename_map_stock = {}
+    if 'Mã Vải' in df.columns and 'Greige Code' not in df.columns:
+        rename_map_stock['Mã Vải'] = 'Greige Code'
+    elif 'DSM Code' in df.columns and 'Greige Code' not in df.columns: # If DSM Code was an intermediate name
+        rename_map_stock['DSM Code'] = 'Greige Code'
+    
+    # Common renames
+    rename_map_stock.update({
         'ETA': 'Greige ETA',
         'Available': 'Greige Incoming'
     })
+    df = df.rename(columns=rename_map_stock)
     
-    # Convert Greige Code to integer
-    df['Greige Code'] = pd.to_numeric(df['Greige Code'], errors='coerce')
+    # Convert Greige Code to string
+    if 'Greige Code' in df.columns:
+        df['Greige Code'] = df['Greige Code'].astype(str)
     
-    # Convert dates
+    # Convert dates and numerics for other columns
     df['Greige ETA'] = pd.to_datetime(df['Greige ETA'], errors='coerce')
-    
-    # Convert quantities to numeric
     df['Greige Incoming'] = pd.to_numeric(df['Greige Incoming'], errors='coerce')
     
     return df
 
 def clean_po_data(df):
     """Cleans and preprocesses PO data."""
-    # Convert Greige Code to integer
-    df['Greige Code'] = pd.to_numeric(df['Greige Code'], errors='coerce')
+    # Handle renaming for Greige Code (from 'Mã Vải' or 'DSM Code')
+    if 'Mã Vải' in df.columns and 'Greige Code' not in df.columns and 'DSM Code' not in df.columns :
+        df.rename(columns={'Mã Vải': 'Greige Code'}, inplace=True)
+    elif 'DSM Code' in df.columns and 'Greige Code' not in df.columns:
+        df.rename(columns={'DSM Code': 'Greige Code'}, inplace=True)
     
-    # Convert dates
+    # If 'Greige Code' might have NaNs and 'Mã Vải'/'DSM Code' could fill them (after primary rename)
+    # This logic might need refinement based on exact precedence if multiple source columns exist
+    if 'Greige Code' in df.columns:
+        if 'Mã Vải' in df.columns and df['Greige Code'].isnull().any():
+             df['Greige Code'].fillna(df['Mã Vải'], inplace=True)
+        # Similar fill from 'DSM Code' if it was an alternative source before renaming to Greige Code
+
+    # Convert Greige Code to string
+    if 'Greige Code' in df.columns:
+        df['Greige Code'] = df['Greige Code'].astype(str)
+
+    # Convert dates and numerics for other columns
     date_columns = ['CHD', 'OCD( Order Creation Day)']
     for col in date_columns:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors='coerce')
     
-    # Convert quantities to numeric
     df['Quantity request'] = pd.to_numeric(df['Quantity request'], errors='coerce')
+    df['Forecasted'] = df['Forecasted'].astype(str).str.lower()
     
     return df
 
