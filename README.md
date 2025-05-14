@@ -120,6 +120,30 @@ The main script `po_processor.py` orchestrates the following steps:
     * Navigate to the directory containing the scripts.
     * Execute the main processor: `python3 po_processor.py`
 
+### Local Development
+
+* Run the application:
+* bash
+* python3 app.py
+* Visit `http://localhost:5000` in your browser
+
+## File Processing
+
+* Upload your Excel file through the web interface
+* Maximum file size: 16MB
+* Supported format: .xlsx
+* Processed file will be available for immediate download
+
+## Error Handling
+
+* The application handles:
+  * Invalid file types
+  * Processing errors
+  * Import errors
+  * System errors
+
+* All errors are displayed with clear user feedback.
+
 ## Output
 
 The script will generate an Excel file (e.g., `PO - Processed Output.xlsx` by default) containing the following sheets:
