@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fabric Stock Management and ETD Calculator</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding: 1rem 0;
+            text-align: center;
+        }
+        header h1 {
+            margin: 0;
+            padding: 0;
+        }
+        nav {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        nav a {
+            color: #333;
+            padding: 5px 10px;
+            text-decoration: none;
+            border-bottom: 2px solid transparent;
+        }
+        nav a:hover {
+            border-bottom: 2px solid #333;
+        }
+        .section {
+            margin-bottom: 20px;
+        }
+        .section h2 {
+            color: #333;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        code {
+            background-color: #eee;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+        pre {
+            background-color: #eee;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        ul {
+            list-style-type: square;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Fabric Stock Management and ETD Calculator</h1>
+    </header>
+
+    <div class="container">
+        <nav>
+            <a href="#overview">Overview</a>
+            <a href="#requirements">Requirements</a>
+            <a href="#how-to-run">How to Run</a>
+            <a href="#input-data">Input Data</a>
+            <a href="#output">Output</a>
+            <a href="https://github.com/Daniel1011/po_processor" target="_blank">GitHub Repository</a>
+        </nav>
+
+        <div id="overview" class="section">
+            <h2>Overview</h2>
+            <p>This project processes Purchase Order (PO) data, fabric stock information, first lot status, and production capacity to calculate and schedule Estimated Time of Delivery (ETD) for fabric orders. It automates several steps, from initial data loading and cleaning to final ETD calculation and output generation in an Excel file.</p>
+            <p>A key aspect of the recent updates is the standardization of column names:</p>
+            <ul>
+                <li><code>DSM Code</code> is now referred to as <code>Greige Code</code>.</li>
+                <li><code>CPT Name</code> is now referred to as <code>Greige Name</code>.</li>
+                <li><code>Greige Code</code> is consistently treated as a <strong>Text/String</strong> data type throughout the process.</li>
+            </ul>
+        </div>
+
+        <div id="requirements" class="section">
+            <h2>Requirements</h2>
+            <ul>
+                <li>Python 3.x</li>
+                <li>Pandas library (<code>pip install pandas openpyxl</code>)</li>
+            </ul>
+            <p>The <code>config.py</code> file centralizes key parameters for the application such as input/output file names, lead times, and capacity settings.</p>
+        </div>
+        
+        <div id="input-data" class="section">
+            <h2>Input Data Format</h2>
+            <p>The script expects an Excel file (e.g., <code>PO - Request.xlsx</code>) with the following sheets:</p>
+            <ol>
+                <li><strong><code>Stock</code> Sheet:</strong> Contains current fabric stock levels.
+                   <ul>
+                       <li>Key Columns: <code>Greige Code</code> (Text type), <code>Greige ETA</code>, <code>Greige Incoming</code>.</li>
+                   </ul>
+                </li>
+                <li><strong><code>PO</code> Sheet:</strong> Contains purchase order details.
+                    <ul>
+                        <li>Key Columns: <code>PO</code>, <code>Greige Code</code> (Text type), <code>Greige Name</code> (Text type), <code>CHD</code>, <code>Quantity request</code>, <code>OCD</code>.</li>
+                    </ul>
+                </li>
+                <li><strong><code>1ST LOT STATUS</code> Sheet:</strong> Information about the status of the first lot of production.
+                    <ul>
+                        <li>Key Columns: <code>Greige Code</code> (Text type), <code>COLOR</code>, <code>STATUS</code>, <code>DUE DATE</code>.</li>
+                    </ul>
+                </li>
+                <li><strong><code>Capacity Status</code> Sheet:</strong> Details daily or weekly production capacity.</li>
+            </ol>
+            <p><strong>Important Note:</strong> The script handles legacy column names like <code>DSM Code</code>, <code>Mã Vải</code>, and <code>CPT Name</code>, automatically renaming them to <code>Greige Code</code> and <code>Greige Name</code>. <code>Greige Code</code> is always processed as a text/string.</p>
+        </div>
+
+        <div id="how-to-run" class="section">
+            <h2>How to Run</h2>
+            <p>This project consists of Python scripts that you need to run in your local environment. It does not run directly in the browser.</p>
+            <ol>
+                <li><strong>Ensure Prerequisites:</strong>
+                    <ul>
+                        <li>Install Python 3.</li>
+                        <li>Install the pandas and openpyxl libraries:
+                            <pre><code>pip install pandas openpyxl</code></pre>
+                        </li>
+                    </ul>
+                </li>
+                <li><strong>Prepare Input File:</strong>
+                    <ul>
+                        <li>Ensure your input Excel file (default: <code>PO - Request.xlsx</code>) is present and structured according to the "Input Data Format" section.</li>
+                        <li>Place it in the same directory as the scripts, or update <code>INPUT_EXCEL_FILE</code> in <code>config.py</code>.</li>
+                    </ul>
+                </li>
+                <li><strong>Run the Script:</strong>
+                    <ul>
+                        <li>Open a terminal or command prompt.</li>
+                        <li>Navigate to the directory containing the scripts.</li>
+                        <li>Execute the main processor:
+                            <pre><code>python3 po_processor.py</code></pre>
+                        </li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <div id="output" class="section">
+            <h2>Output</h2>
+            <p>The script will generate an Excel file (e.g., <code>PO - Processed Output.xlsx</code> by default, configurable in <code>config.py</code>) containing the following sheets:</p>
+            <ul>
+                <li><strong><code>Draft_ETD_and_2nd_ETD</code>:</strong> Detailed information for each PO line, including <code>Greige Code</code>, <code>Greige Name</code>, original PO details, calculated <code>Draft ETD</code>, <code>1ST LOT STATUS</code>, <code>DUE DATE</code> (from 1st Lot), and <code>2nd ETD</code>.</li>
+                <li><strong><code>Remaining_Stock</code>:</strong> Shows the <code>Greige Code</code>, <code>Greige Name</code>, remaining on-hand stock, and remaining incoming batches after initial allocations.</li>
+                <li><strong><code>Final_ETD_Schedule</code>:</strong> The final production schedule and ETDs for all POs, including details on split batches if applicable.</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>For more details, visit the <a href="https://github.com/Daniel1011/po_processor" target="_blank">GitHub Repository</a>.</p>
+            <p>This page provides a summary of the project. The core logic is implemented in Python and needs to be run locally.</p>
+        </div>
+    </div>
+</body>
+</html> 
