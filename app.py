@@ -7,8 +7,8 @@ import uuid # To create unique filenames
 # --- Configuration ---
 # It's good practice to put these in environment variables or a config file for production
 # For simplicity here, we define them directly.
-UPLOAD_FOLDER = 'uploads'
-OUTPUT_FOLDER = 'outputs'
+UPLOAD_FOLDER = '/tmp/uploads'
+OUTPUT_FOLDER = '/tmp/outputs'
 ALLOWED_EXTENSIONS = {'xlsx'}
 
 app = Flask(__name__)
