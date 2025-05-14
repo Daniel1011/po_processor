@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>PO Processor - Upload</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f2f5;
+            color: #1c1e21;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            width: 100%;
+            max-width: 550px;
+            text-align: center;
+        }
+        header h1 {
+            color: #1c1e21;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        header p {
+            color: #606770;
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+
+        /* Custom File Input */
+        .file-upload-wrapper {
+            position: relative;
+            display: block; /* Changed from inline-block for label behavior */
+            margin-bottom: 20px;
+            border: 2px dashed #ccd0d5;
+            border-radius: 6px;
+            padding: 30px;
+            width: auto; /* Adjust width as needed, or let it be block level */
+            cursor: pointer;
+            background-color: #f7f8fa;
+            transition: border-color 0.2s ease, background-color 0.2s ease;
+        }
+        .file-upload-wrapper:hover {
+            border-color: #007bff;
+            background-color: #f0f5ff;
+        }
+        /* Hide the actual file input */
+        #fileInput {
+            display: none;
+        }
+        .file-upload-text {
+            color: #606770;
+            font-size: 16px;
+        }
+        .file-upload-text .icon { 
+            font-size: 24px; 
+            display:block; 
+            margin-bottom:10px; 
+            color: #007bff;
+        }
+        #fileNameDisplay {
+            margin-top: 10px;
+            font-style: italic;
+            color: #333;
+            font-size: 14px;
+            display: block; /* Ensure it takes its own line */
+            min-height: 1.2em; /* Prevent layout shift */
+        }
+
+        .submit-btn {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .submit-btn:hover {
+            background-color: #0056b3;
+        }
+        .submit-btn:disabled {
+            background-color: #a0c7e4;
+            cursor: not-allowed;
+        }
+
+        .flashes {
+            list-style-type: none;
+            padding: 0;
+            margin: 20px 0 0 0;
+            width: 100%;
+        }
+        .flashes li {
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            font-size: 15px;
+            text-align: left;
+        }
+        .flashes li.success {
+            background-color: #d1e7dd;
+            color: #0f5132;
+            border: 1px solid #badbcc;
+        }
+        .flashes li.error {
+            background-color: #f8d7da;
+            color: #842029;
+            border: 1px solid #f5c2c7;
+        }
+
+        .instructions {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f7f8fa;
+            border-radius: 6px;
+            font-size: 14px;
+            text-align: left;
+            border: 1px solid #e0e0e0;
+        }
+        .instructions strong {
+            color: #1c1e21;
+        }
+        .instructions ul {
+            padding-left: 20px;
+            margin-top: 10px;
+            margin-bottom: 0;
+        }
+        .instructions li {
+            margin-bottom: 8px;
+            color: #606770;
+        }
+
+        .loader {
+            display: none; /* Hidden by default */
+            margin-top: 20px;
+            font-size: 16px;
+            color: #007bff;
+        }
+        .loader::before {
+            content: "";
+            box-sizing: border-box;
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border: 2px solid #007bff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        footer {
+            margin-top: 40px;
+            font-size: 12px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>PO Data Processor</h1>
+            <p>Upload your Excel file to process Purchase Orders and calculate ETDs.</p>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <ul class="flashes">
+            {% for category, message in messages %}
+              <li class="{{ category }}">{{ message }}</li>
+            {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+
+        <form method="post" enctype="multipart/form-data" id="uploadForm">
+            <label for="fileInput" class="file-upload-wrapper">
+                <span class="file-upload-text">
+                    <span class="icon">&#x1F4C2;</span> <!-- Unicode open folder icon -->
+                    Click or Drag & Drop your .xlsx file here
+                    <div id="fileNameDisplay">No file selected</div>
+                </span>
+            </label>
+            <input type="file" name="file" accept=".xlsx" id="fileInput" required>
+            
+            <button type="submit" class="submit-btn" id="submitButton">Upload and Process</button>
+        </form>
+
+        <div class="loader" id="loader">
+            Processing your file, please wait...
+        </div>
+
+        <div class="instructions">
+            <strong>How to use:</strong>
+            <ul>
+                <li>Ensure your Excel file is in <code>.xlsx</code> format.</li>
+                <li>The input file should be named or structured as expected by the processor (typically like <code>PO - Request.xlsx</code> with the required sheets and columns).</li>
+                <li>Click on the upload area or drag and drop your file.</li>
+                <li>Click "Upload and Process".</li>
+                <li>If successful, the processed <code>Output_Stock_Management.xlsx</code> file will start downloading automatically.</li>
+            </ul>
+        </div>
+    </div>
+    <footer>
+        &copy; 2024 PO Processor App
+    </footer>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const uploadForm = document.getElementById('uploadForm');
+        const submitButton = document.getElementById('submitButton');
+        const loader = document.getElementById('loader');
+
+        fileInput.addEventListener('change', function() {
+            if (fileInput.files.length > 0) {
+                fileNameDisplay.textContent = fileInput.files[0].name;
+            } else {
+                fileNameDisplay.textContent = 'No file selected';
+            }
+        });
+
+        uploadForm.addEventListener('submit', function(event) { // Added event parameter
+            if (fileInput.files.length === 0) {
+                alert("Please select a file before uploading.");
+                event.preventDefault(); // Prevent form submission
+                return;
+            }
+            submitButton.disabled = true;
+            submitButton.textContent = 'Processing...';
+            loader.style.display = 'block';
+
+            // Attempt to reset the UI shortly after submission.
+            // This is a workaround for non-AJAX forms where direct feedback on download start is tricky.
+            // The server will handle the actual processing and download redirect.
+            // This timeout just makes the UI on *this* page not stay stuck in processing state indefinitely.
+            setTimeout(function() {
+                if (submitButton.disabled) { // Only reset if it hasn't been changed by pageshow already
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Upload and Process';
+                    loader.style.display = 'none';
+                    // Optionally clear file input here too, though pageshow also handles it.
+                    // if (fileInput) fileInput.value = null;
+                    // if (fileNameDisplay) fileNameDisplay.textContent = 'No file selected';
+                }
+            }, 3000); // Reset after 3 seconds. Adjust as needed.
+        });
+
+        // Optional: Re-enable button if page is reloaded (e.g. after error redirect or successful download redirect)
+        window.addEventListener('pageshow', function(event) {
+            // Check if the event is a persisted session (e.g., from back/forward cache)
+            // The loader being visible or button being disabled are good indicators of a pending state.
+            if (event.persisted || loader.style.display === 'block' || submitButton.disabled) {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Upload and Process';
+                loader.style.display = 'none';
+                // Clear the file input and displayed name for a fresh start
+                if (fileInput) {
+                    fileInput.value = null; // Clears the selected file
+                }
+                if (fileNameDisplay) {
+                    fileNameDisplay.textContent = 'No file selected';
+                }
+            }
+        });
+    </script>
+</body>
+</html> 

@@ -3,3 +3,4 @@ PO - Request.xlsx
 __pycache__/
 *.pyc 
 launch.json
+*.xlsx
