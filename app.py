@@ -15,7 +15,9 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['OUTPUT_FOLDER'] = OUTPUT_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB limit
-app.secret_key = 'super secret key' # Change this in production!
+
+# Use the environment variable for SECRET_KEY, with a fallback for local development if needed
+app.secret_key = os.environ.get('SECRET_KEY', 'a_default_fallback_key_for_development_only')
 
 # --- Helper Functions ---
 def allowed_file(filename):
