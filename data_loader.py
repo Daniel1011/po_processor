@@ -21,15 +21,15 @@ def load_and_prepare_data(input_file, ocd_col_name):
     # Stock Data
     stock_df['Greige ETA'] = pd.to_datetime(stock_df['Greige ETA'], errors='coerce')
     stock_df['Greige Incoming'] = pd.to_numeric(stock_df['Greige Incoming'], errors='coerce')
-    stock_df.dropna(subset=['DSM Code', 'Greige ETA', 'Greige Incoming'], inplace=True)
+    stock_df.dropna(subset=['Greige Code', 'Greige ETA', 'Greige Incoming'], inplace=True)
     stock_df = stock_df[stock_df['Greige Incoming'] > 0]
 
     # PO Data
-    if 'Mã Vải' in po_df.columns and 'DSM Code' not in po_df.columns:
-            po_df.rename(columns={'Mã Vải': 'DSM Code'}, inplace=True)
-    elif 'Mã Vải' in po_df.columns and 'DSM Code' in po_df.columns:
-        if 'DSM Code' in po_df.columns:
-                po_df['DSM Code'] = po_df['DSM Code'].fillna(po_df['Mã Vải'])
+    if 'Mã Vải' in po_df.columns and 'Greige Code' not in po_df.columns:
+        po_df.rename(columns={'Mã Vải': 'Greige Code'}, inplace=True)
+    elif 'Mã Vải' in po_df.columns and 'Greige Code' in po_df.columns:
+        if 'Greige Code' in po_df.columns:
+            po_df['Greige Code'] = po_df['Greige Code'].fillna(po_df['Mã Vải'])
 
     # Convert all date columns to datetime
     date_columns = ['CHD', ocd_col_name]
@@ -41,9 +41,8 @@ def load_and_prepare_data(input_file, ocd_col_name):
     po_df['Forecasted'] = po_df['Forecasted'].astype(str).str.lower()
     
     # Ensure essential PO columns are present (ocd_col_name handled above)
-    base_required_po_cols = ['PO', 'DSM Code', 'CHD', 'Quantity request', 'Forecasted',
-                             'SPL', 'FG name', 'Season', 'Local/ Export',
-                             'CPT Name', 'ITEM', 'COLOR']
+    base_required_po_cols = ['PO', 'Greige Code', 'CHD', 'Quantity request', 'Forecasted',
+                             'Greige Name', 'ITEM', 'COLOR']
     # Add ocd_col_name to the list for checking if it wasn't missing initially
     required_po_cols_check = base_required_po_cols + [ocd_col_name]
 
@@ -55,13 +54,36 @@ def load_and_prepare_data(input_file, ocd_col_name):
                 print(f"Warning: Column '{col}' not found in PO sheet. Adding it as NA.")
                 po_df[col] = pd.NA
 
-    po_df.dropna(subset=['PO', 'DSM Code', 'CHD', 'Quantity request'], inplace=True)
+    po_df.dropna(subset=['PO', 'Greige Code', 'CHD', 'Quantity request'], inplace=True)
 
     # 1st Lot Status Data
     first_lot_df['DUE DATE'] = pd.to_datetime(first_lot_df['DUE DATE'], errors='coerce')
-    first_lot_df['DSM Code'] = pd.to_numeric(first_lot_df['DSM Code'], errors='coerce')
+    
+    # Handle both old and new column names
+    column_mapping = {
+        'DSM Code': 'Greige Code',
+        'CPT Name': 'Greige Name'
+    }
+    
+    # Modified rename logic for robustness
+    cols_to_rename_in_first_lot = {
+        old_col: new_col 
+        for old_col, new_col in column_mapping.items() 
+        if old_col in first_lot_df.columns
+    }
+    if cols_to_rename_in_first_lot:
+        first_lot_df = first_lot_df.rename(columns=cols_to_rename_in_first_lot)
+    
+    # Ensure required columns exist
+    required_columns = ['Greige Code', 'COLOR', 'STATUS']
+    for col in required_columns:
+        if col not in first_lot_df.columns:
+            print(f"Warning: Column '{col}' not found in 1ST LOT STATUS sheet. Adding it as NA.")
+            first_lot_df[col] = pd.NA
+    
+    first_lot_df['Greige Code'] = pd.to_numeric(first_lot_df['Greige Code'], errors='coerce')
     first_lot_df['STATUS'] = first_lot_df['STATUS'].str.strip().str.upper()
-    first_lot_df.dropna(subset=['DSM Code', 'COLOR', 'STATUS'], inplace=True)
+    first_lot_df.dropna(subset=['Greige Code', 'COLOR', 'STATUS'], inplace=True)
 
     # Print debug information after cleaning
     print("\nDebug: First few rows of first_lot_df after cleaning:")
@@ -108,13 +130,13 @@ def clean_stock_data(df):
     """Cleans and preprocesses stock data."""
     # Rename columns
     df = df.rename(columns={
-        'Mã Vải': 'DSM Code',
+        'Mã Vải': 'Greige Code',
         'ETA': 'Greige ETA',
         'Available': 'Greige Incoming'
     })
     
-    # Convert DSM Code to integer
-    df['DSM Code'] = pd.to_numeric(df['DSM Code'], errors='coerce')
+    # Convert Greige Code to integer
+    df['Greige Code'] = pd.to_numeric(df['Greige Code'], errors='coerce')
     
     # Convert dates
     df['Greige ETA'] = pd.to_datetime(df['Greige ETA'], errors='coerce')
@@ -126,8 +148,8 @@ def clean_stock_data(df):
 
 def clean_po_data(df):
     """Cleans and preprocesses PO data."""
-    # Convert DSM Code to integer
-    df['DSM Code'] = pd.to_numeric(df['DSM Code'], errors='coerce')
+    # Convert Greige Code to integer
+    df['Greige Code'] = pd.to_numeric(df['Greige Code'], errors='coerce')
     
     # Convert dates
     date_columns = ['CHD', 'OCD( Order Creation Day)']
@@ -146,8 +168,17 @@ def clean_first_lot_data(df):
     print("\nDebug: First few rows of first_lot_df before cleaning in clean_first_lot_data:")
     print(df.head())
     
-    # Convert DSM Code to integer
-    df['DSM Code'] = pd.to_numeric(df['DSM Code'], errors='coerce')
+    # Rename columns if they exist
+    column_mapping = {
+        'DSM Code': 'Greige Code',
+        'CPT Name': 'Greige Name'
+    }
+    for old_col, new_col in column_mapping.items():
+        if old_col in df.columns:
+            df.rename(columns={old_col: new_col}, inplace=True)
+    
+    # Convert Greige Code to integer
+    df['Greige Code'] = pd.to_numeric(df['Greige Code'], errors='coerce')
     
     # Convert dates
     df['DUE DATE'] = pd.to_datetime(df['DUE DATE'], errors='coerce')

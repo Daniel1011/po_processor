@@ -8,7 +8,7 @@ def calculate_draft_etd_and_remaining_stock(stock_df, po_df, today_date, lead_ti
     # Prepare stock_data dictionary from stock_df
     stock_data_dict = defaultdict(lambda: {'available_on_hand': 0, 'incoming_batches': []})
     for _, row in stock_df.iterrows():
-        dsm_code = row['DSM Code']
+        dsm_code = row['Greige Code']
         eta = row['Greige ETA']
         quantity = row['Greige Incoming']
         if eta <= today_date:
@@ -34,7 +34,7 @@ def calculate_draft_etd_and_remaining_stock(stock_df, po_df, today_date, lead_ti
      
 
     for _, po_row in po_df_sorted.iterrows():
-        dsm_code = po_row['DSM Code']
+        dsm_code = po_row['Greige Code']
         requested_qty = po_row['Quantity request']
         draft_etd_val = far_future_date 
         current_stock_info = stock_for_draft_etd[dsm_code]
@@ -81,9 +81,9 @@ def calculate_draft_etd_and_remaining_stock(stock_df, po_df, today_date, lead_ti
 
     # Prepare Remaining Stock DataFrame
     remaining_stock_list = []
-    # CPT Name is sourced from po_df as per user request
-    dsm_to_cpt_name_map = po_df.drop_duplicates(subset=['DSM Code']).set_index('DSM Code')['CPT Name'].to_dict()
-    all_dsm_codes_for_remaining = set(stock_df['DSM Code'].unique()) | set(po_df['DSM Code'].unique())
+    # Greige Name is sourced from po_df as per user request
+    dsm_to_cpt_name_map = po_df.drop_duplicates(subset=['Greige Code']).set_index('Greige Code')['Greige Name'].to_dict()
+    all_dsm_codes_for_remaining = set(stock_df['Greige Code'].unique()) | set(po_df['Greige Code'].unique())
 
     for dsm_code in sorted(list(all_dsm_codes_for_remaining)):
         stock_status = stock_for_draft_etd[dsm_code]
@@ -96,8 +96,8 @@ def calculate_draft_etd_and_remaining_stock(stock_df, po_df, today_date, lead_ti
                 incoming_batches_str_list.append(f"ETA: {eta_str}, Qty: {int(batch['quantity'])}")
         remaining_incoming_str = "; ".join(incoming_batches_str_list) if incoming_batches_str_list else "None"
         remaining_stock_list.append({
-            'DSM Code': dsm_code,
-            'CPT Name': cpt_name,
+            'Greige Code': dsm_code,
+            'Greige Name': cpt_name,
             f'Remaining Available (as of {today_date.strftime("%Y-%m-%d")})': remaining_on_hand,
             'Remaining Incoming Batches': remaining_incoming_str
         })

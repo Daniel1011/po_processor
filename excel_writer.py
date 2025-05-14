@@ -9,7 +9,7 @@ def write_output_to_excel(output_file, draft_etd_df, remaining_stock_df, final_e
         # DRAFT ETD sheet
         draft_etd_output_cols = [
             'SPL', 'FG name', 'Season', 'Local/ Export', 'PO', ocd_col_name, 'CHD',
-            'DSM Code', 'CPT Name', 'ITEM', 'COLOR', 'Quantity request', 'Forecasted',
+            'Greige Code', 'Greige Name', 'ITEM', 'COLOR', 'Quantity request', 'Forecasted',
             'Draft ETD', '1ST LOT STATUS', 'DUE DATE', '2nd ETD'
         ]
         # Ensure all columns exist, add if not for safety
@@ -35,7 +35,7 @@ def write_output_to_excel(output_file, draft_etd_df, remaining_stock_df, final_e
         # FINAL ETD sheet
         final_etd_output_cols = [
             'SPL', 'FG name', 'Season', 'Local/ Export', 'PO', ocd_col_name, 'CHD',
-            'DSM Code', 'CPT Name', 'ITEM', 'COLOR', 'Quantity request', 'Forecasted',
+            'Greige Code', 'Greige Name', 'ITEM', 'COLOR', 'Quantity request', 'Forecasted',
             'Draft ETD', '1ST LOT STATUS', 'DUE DATE', '2nd ETD',
             'DEVIDED QUANTITY 1ST', 'DATE 1ST BATCH',
             'DEVIDED QUANTITY 2ND', 'DATE 2ND BATCH',
